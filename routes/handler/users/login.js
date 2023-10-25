@@ -5,10 +5,8 @@ const v = new Validator();
 
 module.exports = async (req, res) => {
   const scheme = {
-    name: "string|empty:false",
     email: "email|empty:false",
     password: "string|min:6",
-    profession: "string|optional",
   };
 
   const validate = v.validate(req.body, scheme);
@@ -22,29 +20,34 @@ module.exports = async (req, res) => {
 
   const user = await User.findOne({ where: { email: req.body.email } });
 
-  if (user) {
-    return res.status(409).json({
+  if (!user) {
+    return res.status(404).json({
       status: "error",
-      message: "email already exist",
+      message: "User not found",
     });
   }
 
-  const password = await bcrypt.hash(req.body.password, 10);
+  const isValidPassword = await bcrypt.compare(
+    req.body.password,
+    user.password
+  );
 
-  const data = {
-    password,
-    name: req.body.name,
-    email: req.body.email,
-    profession: req.body.profession,
-    role: "student",
-  };
-
-  const createUser = await User.create(data);
+  if (!isValidPassword) {
+    return res.status(404).json({
+      status: "error",
+      message: "User not found",
+    });
+  }
 
   return res.json({
     status: "success",
     data: {
-      id: createUser.id,
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      avatar: user.avatar,
+      profession: user.profession,
     },
   });
 };
